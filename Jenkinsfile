@@ -12,13 +12,23 @@ pipeline {
     stages {
         stage('Git Checkout') {
             steps {
-                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/RahulSinha9/Shopping-Cart.git'
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/RahulSinha9/Shopping-Cart'
             }
         }
         
-        stage('COMPILE') {
+        stage('compile') {
             steps {
-                sh "mvn clean compile -DskipTests=true"
+                sh "mvn clean compile"
+            }
+        }
+        
+        
+        stage('Sonarqube Analysis') {
+            steps {
+                   sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.url=http://18.234.226.160:9000/ -Dsonar.login=squ_eedcb995a8e2bced369520a2eecdbb47439b4d15 -Dsonar.projectName=Shopping-Cart \
+                   -Dsonar.java.binaries=. \
+                   -Dsonar.projectKey=Shopping-Cart '''
+               
             }
         }
         
@@ -29,34 +39,13 @@ pipeline {
             }
         }
         
-        stage('Sonarqube') {
+        stage('Build Application') {
             steps {
-                withSonarQubeEnv('sonar-server'){
-                   sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Shopping-Cart \
-                   -Dsonar.java.binaries=. \
-                   -Dsonar.projectKey=Shopping-Cart '''
-               }
+                sh "mvn clean Install"
             }
         }
         
-        stage('Build') {
-            steps {
-                sh "mvn clean package -DskipTests=true"
-            }
-        }
         
-        stage('Docker Build & Push') {
-            steps {
-                script{
-                    withDockerRegistry(credentialsId: '2fe19d8a-3d12-4b82-ba20-9d22e6bf1672', toolName: 'docker') {
-                        
-                        sh "docker build -t shopping-cart -f docker/Dockerfile ."
-                        sh "docker tag  shopping-cart adijaiswal/shopping-cart:latest"
-                        sh "docker push adijaiswal/shopping-cart:latest"
-                    }
-                }
-            }
-        }
         
         
     }
